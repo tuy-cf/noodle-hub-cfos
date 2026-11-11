@@ -1,134 +1,77 @@
 {
   // Cloudflare account that owns every Worker and provisioned resource.
-  // Find it: https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/
-  "accountId": "<CLOUDFLARE_ACCOUNT_ID>",
+  "accountId": "68771a7a9aead6d6699483ef609324ae",
 
-  // The deployment's public origin, used for PUBLIC_BASE_URL and to scope Context data.
-  // null derives it from workers.router.route.customDomain.
-  // Required when the router uses workersDev: the account's workers.dev subdomain is not
-  // knowable from this file. Write it as a bare origin, no path and no trailing slash --
-  // "https://<router-name>.<subdomain>.workers.dev".
+  // null derives the public origin from workers.router.route.customDomain.
   "publicBaseUrl": null,
 
-  // Worker names are permanent service identities. Keep them unique within the account.
-  // Reference: docs/customization.md#workers-and-routing
+  // Worker names are permanent service identities for the Nimbus Labs workshop
+  // deployment. Renaming Workshop, Context, or Scheduler strands their Durable
+  // Object data; do not rename.
   "workers": {
-    // Owns the public URL and serves the frontend. Proxies /api and /blueprint-screenshot to the
-    // Workshop, and /gatekeeper/<name> to the matching Gatekeeper.
     "router": {
-      "name": "<ROUTER_WORKER_NAME>",
-
-      // Production: use a hostname in an active Cloudflare zone. Wrangler creates DNS and TLS.
-      // Evaluation: replace this with "route": { "workersDev": true } and set publicBaseUrl above.
-      // https://developers.cloudflare.com/workers/configuration/routing/custom-domains/
-      "route": { "customDomain": "os.example.com" }
+      "name": "nimbus-labs-os",
+      "route": { "customDomain": "os.nimbuslabs.io" }
     },
-
-    // The Workshop backend. No public route: the router reaches it over a service binding.
-    "workshop": { "name": "<WORKSHOP_WORKER_NAME>" },
-    "context": { "name": "<CONTEXT_WORKER_NAME>" },
-
-    // The Scheduler Gatekeeper, which gives agents scheduled and recurring work. Ambient like
-    // the Context Gatekeeper
-    "scheduler": { "name": "<SCHEDULER_WORKER_NAME>" },
-
-    // The Web Search Gatekeeper, which lets agents search the public web. Ambient too. It searches
-    // through aiGateway.name below when that gateway is in this account, and through the account's
-    // "default" gateway when aiGateway is disabled or in another account. Searches are billed
-    // separately from models: load AI Gateway credits on the account, or store a Ceramic key
-    // (alias "default") on the gateway it actually searches through, or every search fails.
-    // See docs/customization.md#workers-and-routing.
-    "websearch": { "name": "<WEBSEARCH_WORKER_NAME>" },
-
-    "customGatekeeper": { "name": "<CUSTOM_GATEKEEPER_WORKER_NAME>" },
-    "errorReporter": { "name": "<ERROR_REPORTER_WORKER_NAME>" }
+    "workshop": { "name": "nimbus-labs-os-workshop" },
+    "context": { "name": "nimbus-labs-os-context" },
+    "scheduler": { "name": "nimbus-labs-os-scheduler" },
+    "websearch": { "name": "nimbus-labs-os-websearch" },
+    "customGatekeeper": { "name": "nimbus-labs-os-gk-custom" },
+    "errorReporter": { "name": "nimbus-labs-os-errors" }
   },
 
-  // Optional upstream Gatekeepers (GitHub, Slack, ...), keyed by slug, each its own Worker:
-  //   "github": { "name": "<router-name>-gk-github" }
-  // `pnpm cf-os init` offers them; `pnpm cf-os secrets` sets their OAuth credentials.
-  // Reference: docs/customization.md#optional-gatekeepers
   "gatekeepers": {},
 
-  // This starter deploys Cloudflare Access mode. Cloudflare OS also supports built-in password
-  // accounts and auth Gatekeeper sign-in; see the reference below before switching. The audience
-  // comes from the self-hosted Access application protecting the public hostname: `pnpm cf-os init`
-  // sets it all up, or set "admins" and `pnpm cf-os access` finds or creates that application and
-  // fills in issuer and audience.
-  // "admins" gates /admin in every sign-in method.
-  // Reference: docs/customization.md#sign-in-methods
+  // Self-hosted Access application protecting os.nimbuslabs.io; One-time PIN
+  // sign-in. "admins" gates /admin.
   "access": {
-    "issuer": "https://<TEAM_NAME>.cloudflareaccess.com",
-    "audience": "<ACCESS_AUDIENCE>",
-    "admins": ["<ADMIN_EMAIL>"]
+    "issuer": "https://nimbus-labs.cloudflareaccess.com",
+    "audience": "c58a0414817efe1f68277fd2c893dd1b4540e4b85a40242cb36a3a40911b81ce",
+    "admins": ["tuy@cloudflare.com"]
   },
 
-  // Model catalog served through Cloudflare AI Gateway. Enabled by default: the Workshop reaches
-  // the gateway over its WORKERS_AI binding, which is pre-authenticated inside your own account,
-  // so no API token is needed.
+  // Model catalog served through Cloudflare AI Gateway. The Workshop reaches
+  // the gateway over its WORKERS_AI binding, pre-authenticated inside this
+  // account, so no API token is needed. "cloudflare" is Workers AI: workshop
+  // attendees use the shared catalog instead of supplying their own keys.
   // Reference: docs/customization.md#ai-models
   "aiGateway": {
     "enabled": true,
-
-    // Your account's AI Gateway. "default" is the one Cloudflare creates for the account.
-    // Migrating from the hosted deploy? Use the gateway that flow created: "<instance>-ai"
-    // (e.g. "cloudflareos-ai"), named after your instance. See docs/migrate-from-hosted.md.
     "name": "default",
-
-    // null reuses the top-level accountId. Set only if the gateway lives in another account --
-    // that requires CF_AI_GATEWAY_API_TOKEN, since the binding cannot reach across accounts.
     "accountId": null,
-
-    // "cloudflare" is Workers AI, which needs no key of your own. anthropic/openai need keys
-    // stored on the gateway; "google" additionally requires CF_AI_GATEWAY_API_TOKEN.
     "providers": ["cloudflare"]
   },
 
   "context": {
-    // Isolates Context data shared by this Workshop deployment.
-    // null scopes it to the public origin
-    "sharingDomain": null,
+    // Pinned literal so the Context isolation boundary stays on the original
+    // public origin even if the route ever changes.
+    "sharingDomain": "https://os.nimbuslabs.io",
 
-    // null: Wrangler provisions and remembers a KV namespace on first deploy.
-    // string: bind an existing namespace by ID.
-    "kvNamespaceId": null
-
-    // Optional Git-compatible storage for Context collections. To enable it, add a comma after
-    // kvNamespaceId and uncomment this object. Requires Artifacts account access.
-    // "artifacts": {
-    //   "enabled": true,
-    //   // Optional override; defaults to "gatekeeper-context-collections".
-    //   "namespace": "custom-context-collections"
-    // }
+    // Existing namespace from the initial deployment; adopted, not provisioned.
+    "kvNamespaceId": "cb705e5696fd4612abe3de93cb2c53e6"
   },
 
-  // Displayed to agents when the example custom integration is enabled in /admin. false deploys none.
-  // Reference: docs/customization.md#custom-gatekeepers
+  // Workshop does not use the example custom integration.
   "customGatekeeper": {
-    "enabled": true,
-    "name": "<ORGANIZATION_DISPLAY_NAME>",
-    "message": "<ORGANIZATION_GUIDANCE>"
+    "enabled": false,
+    "name": "Nimbus Labs",
+    "message": "Use only the capabilities provided for the Nimbus Labs workshop."
   },
 
-  // Explicit backend issue reports go to a private Worker that emits structured console errors.
-  // Set release to a commit/version when your deployment pipeline has one.
-  // Reference: docs/observability.md#quick-start
   "errorReporting": {
     "enabled": true,
-    "environment": "production",
+    "environment": "workshop",
     "release": null
   },
 
-  // null values use Wrangler automatic provisioning. Set IDs/names to reuse owned resources.
-  // https://developers.cloudflare.com/workers/wrangler/configuration/#automatic-provisioning
+  // Existing storage from the initial deployment; adopted, not provisioned.
   "resources": {
-    "blueprintsKvNamespaceId": null,
-    "avatarsKvNamespaceId": null,
-    "blueprintContentBucket": null
+    "blueprintsKvNamespaceId": "a5ca024e65ab402486ecd9bed0dff69c",
+    "avatarsKvNamespaceId": "d9fbe0dcf0b84750b94c45ef879171d3",
+    "blueprintContentBucket": "nimbus-labs-os-workshop-blueprint-content"
   },
 
-  // Structured custom logs stay enabled. Invocation logs and traces are separate volume controls.
-  // https://developers.cloudflare.com/workers/observability/logs/workers-logs/
   "observability": {
     "enabled": true,
     "headSamplingRate": 1,

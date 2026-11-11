@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NoodleConnect</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #15123B;
+    background-image:
+      radial-gradient(900px 500px at 85% -10%, rgba(124, 58, 237, .35), transparent 60%),
+      radial-gradient(700px 500px at 10% 110%, rgba(167, 139, 250, .22), transparent 60%);
+    color: #F5F3FF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    width: 100%;
+    max-width: 420px;
+    background: rgba(30, 27, 75, .88);
+    border: 1px solid rgba(167, 139, 250, .25);
+    border-radius: 24px;
+    box-shadow: 0 24px 64px rgba(10, 8, 40, .55);
+    padding: 48px 40px 28px;
+    text-align: center;
+  }
+  .logo { width: 88px; height: 88px; border-radius: 22px; }
+  h1 { margin: 20px 0 6px; font-size: 28px; letter-spacing: -.5px; font-weight: 700; }
+  h1 .accent { color: #A78BFA; }
+  .sub { color: #C4B5FD; font-size: 14.5px; line-height: 1.5; margin-bottom: 28px; }
+  .message { color: #FDA4AF; font-size: 14px; margin: -12px 0 16px; }
+  cf-access-authbox { display: block; margin: 0 auto 24px; }
+  footer { font-size: 12px; color: rgba(196, 181, 253, .65); }
+</style>
+</head>
+<body>
+<main class="card">
+  <img class="logo" src="https://raw.githubusercontent.com/tuy-cf/noodle-hub-cfos/main/branding/noodlehub-mark-512.png" alt="NoodleHub logo" width="88" height="88" />
+  <h1>Noodle<span class="accent">Connect</span></h1>
+  <p class="sub">Sign in to continue to {{ app_name }}</p>
+  {% if message.text.size > 0 %}
+  <p class="message" role="status">{{ message.text }}</p>
+  {% endif %}
+  <cf-access-authbox></cf-access-authbox>
+  <footer>Protected by Cloudflare Access</footer>
+</main>
+</body>
+</html>
